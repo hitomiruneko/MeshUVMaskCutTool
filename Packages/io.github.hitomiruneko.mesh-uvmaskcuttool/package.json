@@ -1,0 +1,19 @@
+{
+  "name": "io.github.hitomiruneko.mesh-uvmaskcuttool",
+  "displayName": "MeshUVMaskCutTool",
+  "version": "1.0.0",
+  "unity": "2022.3",
+  "description": "VRChat Avatar Mesh Cutting, Material Slot Splitting, Interactive UV Editor & UV Mask Generator (MIT derivative of MeshUVCutTool & AvatarModifyTools)",
+  "author": {
+    "name": "hitomiruneko",
+    "url": "https://github.com/hitomiruneko"
+  },
+  "license": "MIT",
+  "vpmDependencies": {
+    "nadena.dev.ndmf": ">=1.9.0 <2.0.0",
+    "nadena.dev.modular-avatar": ">=1.14.0 <2.0.0"
+  },
+  "url": "https://github.com/hitomiruneko/MeshUVMaskCutTool",
+  "documentationUrl": "https://github.com/hitomiruneko/MeshUVMaskCutTool#readme",
+  "changelogUrl": "https://github.com/hitomiruneko/MeshUVMaskCutTool/blob/main/CHANGELOG.md"
+}

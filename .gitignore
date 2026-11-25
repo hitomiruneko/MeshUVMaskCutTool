@@ -1,0 +1,10 @@
+.DS_Store
+Thumbs.db
+desktop.ini
+*.tmp
+*.bak
+*.zip
+.vs/
+.idea/
+public/
+vpm-package.json
