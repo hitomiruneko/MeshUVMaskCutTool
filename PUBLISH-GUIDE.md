@@ -26,7 +26,10 @@ git push -u origin main
 git push origin v1.0.0
 ```
 
-> 推送 `v1.0.0` 标签会自动触发 `.github/workflows/release-vpm.yml` 工作流，自动创建 GitHub Release 并生成 VCC 源。
+> 推送 `v1.0.0` 标签会自动触发 `.github/workflows/release-vpm.yml` 工作流，自动创建 GitHub Release 并同时上传 **VCC 源码包 `.zip`** 与 **一键导入版 `.unitypackage`**，并生成 VCC 源网页。
+>
+> 如需提前线下直接测试或发给朋友，本地已为你打包好：
+> `D:\vrc modeloar\unity project\_publish\MeshUVMaskCutTool-v1.0.0.unitypackage`（导入前提：目标工程已通过 VCC 安装 NDMF 与 Modular Avatar；不要与 VCC 版同时装入同一工程）。
 
 ---
 

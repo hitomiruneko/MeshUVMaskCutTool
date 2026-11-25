@@ -38,25 +38,78 @@ jobs:
           echo "version=${PKG_VERSION}" >> "$GITHUB_OUTPUT"
           echo "tag=${RELEASE_TAG}" >> "$GITHUB_OUTPUT"
           echo "zip=${PKG_NAME}-${PKG_VERSION}.zip" >> "$GITHUB_OUTPUT"
+          echo "unitypackage=MeshUVMaskCutTool-v${PKG_VERSION}.unitypackage" >> "$GITHUB_OUTPUT"
 
-      - name: Build package zip
+      - name: Build package zip and unitypackage
         run: |
           (cd "${PKG_DIR}" && zip -r "${GITHUB_WORKSPACE}/${{ steps.meta.outputs.zip }}" .)
           ZIP_SHA256=$(sha256sum "${{ steps.meta.outputs.zip }}" | awk '{print $1}')
           echo "sha256=${ZIP_SHA256}" >> "$GITHUB_OUTPUT"
 
           python3 - <<'PYEOF'
-          import json, os
-          pkg_path = os.path.join(os.environ["PKG_DIR"], "package.json")
+          import hashlib, json, os, re, shutil, tarfile, tempfile
+
+          pkg_dir = os.environ["PKG_DIR"]
+          pkg_path = os.path.join(pkg_dir, "package.json")
           with open(pkg_path, "r", encoding="utf-8") as f:
               data = json.load(f)
           repo = os.environ["GITHUB_REPOSITORY"]
           tag = "${{ steps.meta.outputs.tag }}"
           zip_name = "${{ steps.meta.outputs.zip }}"
+          upkg_name = "${{ steps.meta.outputs.unitypackage }}"
           data["url"] = f"https://github.com/{repo}/releases/download/{tag}/{zip_name}"
           data["zipSHA256"] = "${{ steps.meta.outputs.sha256 }}"
+          data["unitypackageUrl"] = f"https://github.com/{repo}/releases/download/{tag}/{upkg_name}"
           with open("vpm-package.json", "w", encoding="utf-8") as f:
               json.dump(data, f, ensure_ascii=False, indent=2)
+
+          staging = tempfile.mkdtemp(prefix="mumct_upkg_")
+          try:
+              root_guid = hashlib.md5(b"Assets/MeshUVMaskCutTool|io.github.hitomiruneko.mesh-uvmaskcuttool").hexdigest()
+              root_stage = os.path.join(staging, root_guid)
+              os.makedirs(root_stage, exist_ok=True)
+              with open(os.path.join(root_stage, "pathname"), "wb") as f:
+                  f.write(b"Assets/MeshUVMaskCutTool")
+              with open(os.path.join(root_stage, "asset.meta"), "wb") as f:
+                  f.write((
+                      f"fileFormatVersion: 2\n"
+                      f"guid: {root_guid}\n"
+                      f"folderAsset: yes\n"
+                      f"DefaultImporter:\n"
+                      f"  externalObjects: {{}}\n"
+                      f"  userData: \n"
+                      f"  assetBundleName: \n"
+                      f"  assetBundleVariant: \n"
+                  ).encode("utf-8"))
+
+              for dirpath, dirnames, filenames in os.walk(pkg_dir):
+                  for name in sorted(dirnames) + sorted(filenames):
+                      if name == "package.json" or name.endswith(".meta"):
+                          continue
+                      full = os.path.join(dirpath, name)
+                      meta_path = full + ".meta"
+                      if not os.path.exists(meta_path):
+                          raise RuntimeError(f"Missing .meta for {full}")
+                      with open(meta_path, "r", encoding="utf-8") as mf:
+                          m = re.search(r"guid:\s*([0-9a-fA-F]{32})", mf.read())
+                      if not m:
+                          raise RuntimeError(f"Missing guid in {meta_path}")
+                      guid = m.group(1).lower()
+                      rel = os.path.relpath(full, pkg_dir).replace(os.sep, "/")
+                      unity_path = f"Assets/MeshUVMaskCutTool/{rel}"
+                      item_stage = os.path.join(staging, guid)
+                      os.makedirs(item_stage, exist_ok=True)
+                      with open(os.path.join(item_stage, "pathname"), "wb") as pf:
+                          pf.write(unity_path.encode("utf-8"))
+                      shutil.copy2(meta_path, os.path.join(item_stage, "asset.meta"))
+                      if os.path.isfile(full):
+                          shutil.copy2(full, os.path.join(item_stage, "asset"))
+
+              with tarfile.open(upkg_name, "w:gz", format=tarfile.USTAR_FORMAT) as tar:
+                  for entry in sorted(os.listdir(staging)):
+                      tar.add(os.path.join(staging, entry), arcname=entry)
+          finally:
+              shutil.rmtree(staging, ignore_errors=True)
           PYEOF
 
       - name: Create or update GitHub Release
@@ -66,12 +119,13 @@ jobs:
         run: |
           TAG="${{ steps.meta.outputs.tag }}"
           ZIP="${{ steps.meta.outputs.zip }}"
+          UPKG="${{ steps.meta.outputs.unitypackage }}"
           if ! gh release view "${TAG}" >/dev/null 2>&1; then
             gh release create "${TAG}" \
               --title "MeshUVMaskCutTool ${TAG}" \
               --notes "See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details."
           fi
-          gh release upload "${TAG}" "${ZIP}" "vpm-package.json" --clobber
+          gh release upload "${TAG}" "${ZIP}" "${UPKG}" "vpm-package.json" --clobber
 
       - name: Generate VPM index.json and landing page
         env:
@@ -135,7 +189,7 @@ jobs:
               json.dump(listing, f, ensure_ascii=False, indent=2)
 
           ver_items = "".join(
-              f"<li><code>{html.escape(v)}</code> — <a href='{html.escape(d.get('url', '#'))}'>Download ZIP</a></li>"
+              f"<li><code>{html.escape(v)}</code> — <a href='{html.escape(d.get('url', '#'))}'>Download ZIP (VPM)</a> · <a href='{html.escape(d.get('unitypackageUrl') or f'https://github.com/{repo}/releases/download/v{v}/MeshUVMaskCutTool-v{v}.unitypackage')}'>Download .unitypackage</a></li>"
               for v, d in sorted(versions.items(), reverse=True)
           ) or "<li>No tagged releases yet. Push a <code>v*</code> tag (e.g. <code>v1.0.0</code>) to publish.</li>"
 

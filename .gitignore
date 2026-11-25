@@ -4,6 +4,7 @@ desktop.ini
 *.tmp
 *.bak
 *.zip
+*.unitypackage
 .vs/
 .idea/
 public/

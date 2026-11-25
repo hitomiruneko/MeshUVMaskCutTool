@@ -20,6 +20,11 @@ A non-destructive VRChat avatar mesh cutting, material slot splitting, interacti
 - `nadena.dev.ndmf` (`>= 1.9.0 < 2.0.0`)
 - `nadena.dev.modular-avatar` (`>= 1.14.0 < 2.0.0`)
 
+### Alternative: One-Click `.unitypackage` Install
+- Download `MeshUVMaskCutTool-v*.unitypackage` from [GitHub Releases](https://github.com/hitomiruneko/MeshUVMaskCutTool/releases) and double-click (or drag into Unity `Assets`).
+- Installs to `Assets/MeshUVMaskCutTool/`.
+- **Important**: Make sure **NDMF (`>= 1.9.0`)** and **Modular Avatar (`>= 1.14.0`)** are already installed in your project (e.g. via VCC/ALCOM), and **do not** install both the VCC package and `.unitypackage` versions of `MeshUVMaskCutTool` in the same project simultaneously.
+
 ---
 
 ## Features & Enhancements (vs. Upstream MeshUVCutTool)
