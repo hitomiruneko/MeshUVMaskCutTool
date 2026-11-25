@@ -43,8 +43,6 @@ jobs:
       - name: Build package zip and unitypackage
         run: |
           (cd "${PKG_DIR}" && zip -r "${GITHUB_WORKSPACE}/${{ steps.meta.outputs.zip }}" .)
-          ZIP_SHA256=$(sha256sum "${{ steps.meta.outputs.zip }}" | awk '{print $1}')
-          echo "sha256=${ZIP_SHA256}" >> "$GITHUB_OUTPUT"
 
           python3 - <<'PYEOF'
           import hashlib, json, os, re, shutil, tarfile, tempfile
@@ -57,9 +55,10 @@ jobs:
           tag = "${{ steps.meta.outputs.tag }}"
           zip_name = "${{ steps.meta.outputs.zip }}"
           upkg_name = "${{ steps.meta.outputs.unitypackage }}"
+          with open(zip_name, "rb") as zf:
+              zip_sha256 = hashlib.sha256(zf.read()).hexdigest()
           data["url"] = f"https://github.com/{repo}/releases/download/{tag}/{zip_name}"
-          data["zipSHA256"] = "${{ steps.meta.outputs.sha256 }}"
-          data["unitypackageUrl"] = f"https://github.com/{repo}/releases/download/{tag}/{upkg_name}"
+          data["zipSHA256"] = zip_sha256
           with open("vpm-package.json", "w", encoding="utf-8") as f:
               json.dump(data, f, ensure_ascii=False, indent=2)
 
@@ -113,7 +112,6 @@ jobs:
           PYEOF
 
       - name: Create or update GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -122,6 +120,7 @@ jobs:
           UPKG="${{ steps.meta.outputs.unitypackage }}"
           if ! gh release view "${TAG}" >/dev/null 2>&1; then
             gh release create "${TAG}" \
+              --target "${GITHUB_SHA}" \
               --title "MeshUVMaskCutTool ${TAG}" \
               --notes "See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details."
           fi
